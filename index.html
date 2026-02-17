@@ -10,6 +10,7 @@
         :root { --primary: #C41E3A; --bg: #F5F7FA; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 120px; color: #333; -webkit-tap-highlight-color: transparent; }
         
+        /* Header */
         header { background: #fff; padding: 20px 25px; border-top: 10px solid var(--primary); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         h1 { margin: 0; font-size: 1.4rem; font-weight: 800; }
         p { margin: 5px 0 0; color: #888; font-size: 0.9rem; }
@@ -18,18 +19,17 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
-        /* 行程卡片 */
+        /* 卡片样式 */
         .card { background: white; border-radius: 12px; margin: 15px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; }
         .card-header { display: flex; height: 80px; cursor: pointer; }
         .header-left { background: var(--primary); color: white; width: 75px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .header-right { flex: 1; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
         
-        /* 时间线修复 */
+        /* 行程时间线 */
         .timeline-item { position: relative; padding-left: 25px; border-left: 2px solid #eee; padding-bottom: 25px; margin: 0 20px; }
-        .timeline-item:last-child { border-left-color: transparent; }
         .timeline-dot { position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; background: white; border: 3px solid var(--primary); border-radius: 50%; }
-        
-        /* 酒店卡片修复 */
+
+        /* 酒店卡片 */
         .hotel-card { background: white; border-radius: 12px; margin: 15px; padding: 20px; border-left: 5px solid var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
         /* 记账本样式 */
@@ -52,6 +52,7 @@
         .btn-del { border: none; background: none; color: #ddd; margin-left: 10px; padding: 5px; }
         .nav-btn { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #eee; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; text-decoration: none; color: #333; font-weight: 600; margin-top: 8px; }
 
+        /* 底部导航 */
         .tab-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; background: white; border-radius: 50px; display: flex; padding: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); z-index: 1000; }
         .tab-item { flex: 1; text-align: center; color: #aaa; padding: 8px 0; border-radius: 30px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .tab-item.active { background: #FEE8EC; color: var(--primary); }
@@ -68,7 +69,6 @@
     </header>
 
     <div id="tab-itinerary" class="tab-content active"><div id="itinerary-container"></div></div>
-
     <div id="tab-hotel" class="tab-content"><div id="hotel-container"></div></div>
 
     <div id="tab-expense" class="tab-content">
@@ -129,32 +129,33 @@
             el.classList.add('active');
         }
 
-        // === 1. 修复后的行程读取 (对应 image_2f882b.png) ===
+        // === 1. 修复行程：严格对齐你的 Excel 截图 ===
         function loadItinerary() {
             Papa.parse(urls.itinerary, { download: true, complete: res => {
                 const data = res.data;
                 if(!data || data.length < 5) return;
-                document.getElementById('app-title').innerText = data[0][1];
-                document.getElementById('app-subtitle').innerText = data[1][1];
+                
+                // 设置标题
+                if(data[0] && data[0][1]) document.getElementById('app-title').innerText = data[0][1];
+                if(data[1] && data[1][1]) document.getElementById('app-subtitle').innerText = data[1][1];
                 
                 let daysMap = new Map();
-                // data.slice(4) 从第5行开始读，跳过表头
+                // 从第 5 行 (index 4) 开始读取数据
                 data.slice(4).forEach(r => {
-                    // 确保A列有 D1, D2 这样的字
                     if(!r[0] || r[0] === 'Day') return;
                     
                     if(!daysMap.has(r[0])) {
-                        // A列=Day, B列=Date, D列(index 3)=Location(大阪)
+                        // A列=Day, B列=Date, D列(index 3)=Location(标题)
                         daysMap.set(r[0], { n: r[0], d: r[1], l: r[3], e: [] });
                     }
                     
-                    // E列(index 4)=Activity(黑门市场), F列(index 5)=Remarks(吃海鲜), G列(index 6)=Map
+                    // E列(index 4)=Activity(黑门市场) -> 也就是 Timeline 的主标题
                     if(r[4]) {
                         daysMap.get(r[0]).e.push({ 
                             time: r[2], // C列
                             act: r[4],  // E列
-                            rem: r[5],  // F列
-                            map: r[6]   // G列
+                            rem: r[5],  // F列 (备注)
+                            map: r[6]   // G列 (地图)
                         });
                     }
                 });
@@ -178,14 +179,14 @@
             }});
         }
 
-        // === 2. 修复后的酒店读取 (不依赖表头，直接读列) ===
+        // === 2. 修复酒店：直接读列，不依赖 header ===
         function loadHotels() {
             Papa.parse(urls.hotel, { download: true, complete: res => {
                 const cont = document.getElementById('hotel-container');
                 cont.innerHTML = "";
-                // data.slice(1) 跳过第一行表头
+                // 跳过第 1 行表头，从第 2 行开始读
                 res.data.slice(1).forEach(h => {
-                    // A列=酒店名，B列=日期，C列=地址，D列=链接
+                    // A列(index 0) = 酒店名
                     if(!h[0]) return; 
                     cont.innerHTML += `<div class="hotel-card">
                         <div style="font-weight:800; font-size:1.1rem">${h[0]}</div>
@@ -197,7 +198,7 @@
             }});
         }
 
-        // === 3. 记账配置读取 (保持不变) ===
+        // === 3. 记账配置 (保持之前的修复) ===
         function loadSettings() {
             Papa.parse(urls.settings, { download: true, complete: res => {
                 const s = res.data;
