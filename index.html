@@ -10,23 +10,267 @@
         :root { --primary: #C41E3A; --bg: #F5F7FA; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 120px; color: #333; -webkit-tap-highlight-color: transparent; }
         
-        /* 顶部 Header */
         header { background: #fff; padding: 20px 25px; border-top: 10px solid var(--primary); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         h1 { margin: 0; font-size: 1.4rem; font-weight: 800; }
         p { margin: 5px 0 0; color: #888; font-size: 0.9rem; }
 
-        /* 标签页切换 */
         .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
-        /* 行程/酒店卡片 */
+        /* 行程卡片 */
         .card { background: white; border-radius: 12px; margin: 15px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; }
         .card-header { display: flex; height: 80px; cursor: pointer; }
         .header-left { background: var(--primary); color: white; width: 75px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .header-right { flex: 1; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+        
+        /* 时间线修复 */
         .timeline-item { position: relative; padding-left: 25px; border-left: 2px solid #eee; padding-bottom: 25px; margin: 0 20px; }
+        .timeline-item:last-child { border-left-color: transparent; }
         .timeline-dot { position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; background: white; border: 3px solid var(--primary); border-radius: 50%; }
+        
+        /* 酒店卡片修复 */
+        .hotel-card { background: white; border-radius: 12px; margin: 15px; padding: 20px; border-left: 5px solid var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-        /* === 记账本样式 (恢复) === */
-        .expense-header {
+        /* 记账本样式 */
+        .expense-header { background: linear-gradient(135deg, #C41E3A, #A01830); color: white; padding: 30px 20px; text-align: center; margin: 15px; border-radius: 16px; box-shadow: 0 10px 20px rgba(196, 30, 58, 0.2); }
+        .total-num { font-size: 2.5rem; font-weight: 800; }
+        
+        .input-card { background: white; margin: 0 15px 20px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .form-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .form-input { flex: 1; padding: 12px; border: 1px solid #eee; border-radius: 8px; font-size: 1rem; outline: none; }
+        
+        .cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 15px; }
+        .cat-btn { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; opacity: 0.6; }
+        .cat-btn.selected { opacity: 1; transform: scale(1.1); }
+        .cat-icon { width: 40px; height: 40px; background: #f5f5f5; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #666; }
+        .cat-btn.selected .cat-icon { background: var(--primary); color: white; }
+
+        .btn-submit { width: 100%; background: #222; color: white; padding: 14px; border-radius: 10px; font-weight: 700; border: none; font-size: 1rem; }
+        
+        .expense-item { background: white; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid #f9f9f9; }
+        .btn-del { border: none; background: none; color: #ddd; margin-left: 10px; padding: 5px; }
+        .nav-btn { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #eee; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; text-decoration: none; color: #333; font-weight: 600; margin-top: 8px; }
+
+        .tab-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; background: white; border-radius: 50px; display: flex; padding: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); z-index: 1000; }
+        .tab-item { flex: 1; text-align: center; color: #aaa; padding: 8px 0; border-radius: 30px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .tab-item.active { background: #FEE8EC; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="app-title">Loading...</h1>
+        <div class="subtitle-row" style="display:flex; justify-content:space-between;">
+            <p id="app-subtitle">Connecting...</p>
+            <span style="font-size:0.65rem; color:#ddd; font-style:italic;">Designed by isonnn</span>
+        </div>
+    </header>
+
+    <div id="tab-itinerary" class="tab-content active"><div id="itinerary-container"></div></div>
+
+    <div id="tab-hotel" class="tab-content"><div id="hotel-container"></div></div>
+
+    <div id="tab-expense" class="tab-content">
+        <div class="expense-header">
+            <div style="font-size:0.9rem; opacity:0.9; margin-bottom:5px;">总支出 (Total Spent)</div>
+            <div class="total-num" id="display-total">0.00</div>
+            <div style="font-size:0.75rem; background:rgba(255,255,255,0.2); padding:4px 10px; border-radius:20px; display:inline-block; margin-top:8px;" id="rate-display">Loading rate...</div>
+        </div>
+
+        <div class="input-card">
+            <div class="form-row">
+                <input type="number" id="amt-input" class="form-input" placeholder="金额">
+                <input type="text" id="note-input" class="form-input" placeholder="备注">
+            </div>
+            
+            <div class="cat-grid">
+                <div class="cat-btn selected" onclick="selectCat(this, '餐饮', 'fa-utensils')"><div class="cat-icon"><i class="fas fa-utensils"></i></div><span style="font-size:0.7rem; color:#666">餐饮</span></div>
+                <div class="cat-btn" onclick="selectCat(this, '交通', 'fa-train')"><div class="cat-icon"><i class="fas fa-train"></i></div><span style="font-size:0.7rem; color:#666">交通</span></div>
+                <div class="cat-btn" onclick="selectCat(this, '购物', 'fa-shopping-bag')"><div class="cat-icon"><i class="fas fa-shopping-bag"></i></div><span style="font-size:0.7rem; color:#666">购物</span></div>
+                <div class="cat-btn" onclick="selectCat(this, '住宿', 'fa-bed')"><div class="cat-icon"><i class="fas fa-bed"></i></div><span style="font-size:0.7rem; color:#666">住宿</span></div>
+                <div class="cat-btn" onclick="selectCat(this, '其他', 'fa-receipt')"><div class="cat-icon"><i class="fas fa-receipt"></i></div><span style="font-size:0.7rem; color:#666">其他</span></div>
+            </div>
+
+            <button class="btn-submit" onclick="addExpense()">+ 记一笔</button>
+        </div>
+
+        <div id="expense-list" style="padding:0 15px;"></div>
+    </div>
+
+    <nav class="tab-bar">
+        <div class="tab-item active" onclick="switchTab('itinerary', this)"><span>📅</span>行程</div>
+        <div class="tab-item" onclick="switchTab('hotel', this)"><span>🏨</span>酒店</div>
+        <div class="tab-item" onclick="switchTab('expense', this)"><span>💰</span>记账</div>
+    </nav>
+
+    <script>
+        const urls = {
+            itinerary: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=676918941&single=true&output=csv',
+            hotel: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=237062416&single=true&output=csv',
+            settings: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=2009249548&single=true&output=csv'
+        };
+
+        let config = { home: 'MYR', foreign: 'JPY', rate: 0.026 }; 
+        let currentCat = { name: '餐饮', icon: 'fa-utensils' };
+        let expenses = JSON.parse(localStorage.getItem('my_trip_expenses')) || [];
+
+        window.onload = function() {
+            loadSettings();
+            loadItinerary();
+            loadHotels();
+            renderExpenses();
+        };
+
+        function switchTab(id, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            document.querySelectorAll('.tab-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // === 1. 修复后的行程读取 (对应 image_2f882b.png) ===
+        function loadItinerary() {
+            Papa.parse(urls.itinerary, { download: true, complete: res => {
+                const data = res.data;
+                if(!data || data.length < 5) return;
+                document.getElementById('app-title').innerText = data[0][1];
+                document.getElementById('app-subtitle').innerText = data[1][1];
+                
+                let daysMap = new Map();
+                // data.slice(4) 从第5行开始读，跳过表头
+                data.slice(4).forEach(r => {
+                    // 确保A列有 D1, D2 这样的字
+                    if(!r[0] || r[0] === 'Day') return;
+                    
+                    if(!daysMap.has(r[0])) {
+                        // A列=Day, B列=Date, D列(index 3)=Location(大阪)
+                        daysMap.set(r[0], { n: r[0], d: r[1], l: r[3], e: [] });
+                    }
+                    
+                    // E列(index 4)=Activity(黑门市场), F列(index 5)=Remarks(吃海鲜), G列(index 6)=Map
+                    if(r[4]) {
+                        daysMap.get(r[0]).e.push({ 
+                            time: r[2], // C列
+                            act: r[4],  // E列
+                            rem: r[5],  // F列
+                            map: r[6]   // G列
+                        });
+                    }
+                });
+
+                const cont = document.getElementById('itinerary-container');
+                cont.innerHTML = "";
+                daysMap.forEach(d => {
+                    let evs = d.e.map(e => `
+                        <div class="timeline-item"><div class="timeline-dot"></div>
+                        <span style="color:var(--primary);font-weight:700;font-size:0.75rem">${e.time || ''}</span>
+                        <div style="font-weight:700;margin:2px 0">${e.act}</div>
+                        ${e.rem ? `<div style="font-size:0.8rem;color:#666;background:#f8f8f8;padding:8px;border-radius:6px">${e.rem}</div>` : ''}
+                        ${e.map && e.map.startsWith('http') ? `<a href="${e.map}" target="_blank" class="nav-btn">📍 导航</a>` : ''}
+                        </div>`).join('');
+                    cont.innerHTML += `<div class="card">
+                        <div class="card-header" onclick="let s=this.nextElementSibling.style; s.display=s.display==='block'?'none':'block'">
+                        <div class="header-left"><div>${d.n}</div><div style="font-size:0.6rem">${d.d}</div></div>
+                        <div class="header-right"><div>${d.l}</div><i class="fas fa-chevron-down" style="color:#eee"></i></div></div>
+                        <div style="display:none;padding:20px 0">${evs}</div></div>`;
+                });
+            }});
+        }
+
+        // === 2. 修复后的酒店读取 (不依赖表头，直接读列) ===
+        function loadHotels() {
+            Papa.parse(urls.hotel, { download: true, complete: res => {
+                const cont = document.getElementById('hotel-container');
+                cont.innerHTML = "";
+                // data.slice(1) 跳过第一行表头
+                res.data.slice(1).forEach(h => {
+                    // A列=酒店名，B列=日期，C列=地址，D列=链接
+                    if(!h[0]) return; 
+                    cont.innerHTML += `<div class="hotel-card">
+                        <div style="font-weight:800; font-size:1.1rem">${h[0]}</div>
+                        <div style="font-size:0.8rem; color:var(--primary); margin:5px 0">${h[1] || ''}</div>
+                        <div style="font-size:0.8rem; color:#666; margin-bottom:10px">${h[2] || ''}</div>
+                        ${h[3] ? `<a href="${h[3]}" target="_blank" class="nav-btn" style="background:var(--primary);color:white;border:none;width:100%;justify-content:center">打开地图</a>` : ''}
+                        </div>`;
+                });
+            }});
+        }
+
+        // === 3. 记账配置读取 (保持不变) ===
+        function loadSettings() {
+            Papa.parse(urls.settings, { download: true, complete: res => {
+                const s = res.data;
+                if(s && s.length > 2) {
+                    config.home = s[1][1] || 'MYR';
+                    config.foreign = s[2][1] || 'USD';
+                    config.rate = parseFloat(s[1][2]) || 1; 
+                    document.getElementById('rate-display').innerText = `汇率: 1 ${config.foreign} = ${config.rate} ${config.home}`;
+                    renderExpenses();
+                }
+            }});
+        }
+
+        function selectCat(el, name, icon) {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            currentCat = { name, icon };
+        }
+
+        function addExpense() {
+            const amt = parseFloat(document.getElementById('amt-input').value);
+            const note = document.getElementById('note-input').value;
+            if (!amt) return alert("请输入金额");
+
+            const newEx = {
+                id: Date.now(),
+                amount: amt,
+                note: note || currentCat.name,
+                cat: currentCat.name,
+                icon: currentCat.icon,
+                date: new Date().toLocaleDateString()
+            };
+            expenses.unshift(newEx);
+            localStorage.setItem('my_trip_expenses', JSON.stringify(expenses));
+            document.getElementById('amt-input').value = '';
+            document.getElementById('note-input').value = '';
+            renderExpenses();
+        }
+
+        function deleteEx(id) {
+            if(confirm("删除此记录?")) {
+                expenses = expenses.filter(e => e.id !== id);
+                localStorage.setItem('my_trip_expenses', JSON.stringify(expenses));
+                renderExpenses();
+            }
+        }
+
+        function renderExpenses() {
+            const list = document.getElementById('expense-list');
+            list.innerHTML = '';
+            let totalHome = 0;
+
+            expenses.forEach(e => {
+                const homeVal = e.amount * config.rate;
+                totalHome += homeVal;
+                list.innerHTML += `
+                    <div class="expense-item">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:40px;height:40px;background:#FFF0F2;color:#C41E3A;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fas ${e.icon}"></i></div>
+                            <div>
+                                <div style="font-weight:700;color:#333">${e.note}</div>
+                                <div style="font-size:0.75rem;color:#999;margin-top:2px">${e.date} • ${e.cat}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-weight:800;font-size:1.1rem;color:#C41E3A">${config.home} ${homeVal.toFixed(2)}</div>
+                            <div style="font-size:0.75rem;color:#bbb">${e.amount} ${config.foreign}</div>
+                            <button class="btn-del" onclick="deleteEx(${e.id})">×</button>
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('display-total').innerText = `${config.home} ${totalHome.toFixed(2)}`;
+        }
+    </script>
+</body>
+</html>
