@@ -22,30 +22,26 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 卡片通用样式 */
         .card { background: white; border-radius: 12px; margin: 15px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02); }
         .card-header { display: flex; height: 80px; cursor: pointer; }
-        .header-left { background: var(--primary-red); color: white; width: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .header-left { background: var(--primary-red); color: white; width: 75px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .header-right { flex: 1; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* 行程时间线 */
         .timeline-item { position: relative; padding-left: 25px; border-left: 2px solid #eee; padding-bottom: 25px; margin-left: 20px; margin-right: 20px; }
         .timeline-item:last-child { border-left-color: transparent; }
         .timeline-dot { position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; background: white; border: 3px solid var(--primary-red); border-radius: 50%; }
         
-        /* 酒店样式 */
-        .hotel-info { padding: 15px; border-left: 5px solid var(--primary-red); margin: 15px; background: white; border-radius: 8px; }
+        .hotel-info { padding: 15px; border-left: 5px solid var(--primary-red); margin: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        /* 记账样式 */
         .expense-summary { background: var(--primary-red); color: white; padding: 25px; text-align: center; margin: 15px; border-radius: 15px; }
-
-        /* 导航按钮 */
         .nav-btn { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #eee; padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; text-decoration: none; color: #333; font-weight: 600; margin-top: 10px; }
 
-        /* 底部导航栏 */
         .tab-bar { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; background: white; border-radius: 50px; display: flex; padding: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); z-index: 1000; }
         .tab-item { flex: 1; text-align: center; color: #aaa; padding: 8px 0; border-radius: 30px; font-size: 0.75rem; font-weight: bold; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
         .tab-item.active { background: #FEE8EC; color: var(--primary-red); }
+
+        /* 调试日志样式 */
+        #debug-log { font-size: 10px; color: #ccc; padding: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -53,7 +49,7 @@
     <header>
         <h1 id="app-title">Loading...</h1>
         <div class="subtitle-row">
-            <p id="app-subtitle">Connecting...</p>
+            <p id="app-subtitle">Connecting Sheets...</p>
             <span class="credit-tag">Designed by isonnn</span>
         </div>
     </header>
@@ -70,10 +66,12 @@
         <div class="expense-summary">
             <div style="font-size: 0.9rem; opacity: 0.8;">估算总支出</div>
             <div id="total-cost" style="font-size: 2.2rem; font-weight: 800; margin: 5px 0;">RM 0.00</div>
-            <div id="exchange-rate" style="font-size: 0.75rem; opacity: 0.7;">正在加载汇率...</div>
+            <div id="exchange-rate" style="font-size: 0.75rem; opacity: 0.7;">正在加载参考汇率...</div>
         </div>
         <div id="expense-container" style="padding: 0 15px;"></div>
     </div>
+
+    <div id="debug-log"></div>
 
     <nav class="tab-bar">
         <div class="tab-item active" onclick="switchTab('itinerary', this)"><span style="font-size:1.2rem">📅</span>行程</div>
@@ -87,6 +85,11 @@
             hotel: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=237062416&single=true&output=csv',
             settings: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=2009249548&single=true&output=csv'
         };
+
+        function log(msg) {
+            document.getElementById('debug-log').innerText += msg + " | ";
+            console.log(msg);
+        }
 
         window.onload = function() {
             loadItinerary();
@@ -106,40 +109,59 @@
                 download: true,
                 complete: function(results) {
                     const data = results.data;
+                    if (!data || data.length < 5) { log("行程数据行数不足"); return; }
+
+                    // 获取标题 (A1/B1) 和副标题 (A2/B2)
                     document.getElementById('app-title').innerText = data[0][1] || "Travel App";
                     document.getElementById('app-subtitle').innerText = data[1][1] || "Itinerary";
                     
+                    // 根据截图，从第 5 行开始是 D1 数据 (索引从 4 开始)
                     const rows = data.slice(4);
                     let daysMap = new Map();
+
                     rows.forEach(row => {
-                        if (!row[0] || row[0] === "Day") return;
+                        // 过滤标题行、空行或无效行
+                        if (!row[0] || row[0] === "Day" || row[0].trim() === "") return;
+
                         if (!daysMap.has(row[0])) {
                             daysMap.set(row[0], { num: row[0], date: row[1], loc: row[3], events: [] });
                         }
-                        if (row[4]) daysMap.get(row[0]).events.push({ time: row[2], act: row[4], rem: row[5], map: row[6] });
+                        // 映射关系：row[2]=Time, row[4]=Activity, row[5]=Remarks, row[6]=Map Link
+                        if (row[4]) {
+                            daysMap.get(row[0]).events.push({ 
+                                time: row[2], 
+                                act: row[4], 
+                                rem: row[5], 
+                                map: (row[6] && row[6].startsWith('http')) ? row[6] : null 
+                            });
+                        }
                     });
                     
                     const container = document.getElementById('itinerary-container');
+                    container.innerHTML = ""; // 清空加载中状态
                     daysMap.forEach(d => {
                         let evHtml = d.events.map(ev => `
                             <div class="timeline-item">
                                 <div class="timeline-dot"></div>
                                 <div style="color:var(--primary-red); font-weight:700; font-size:0.8rem;">${ev.time}</div>
                                 <div style="font-weight:800; margin:3px 0;">${ev.act}</div>
-                                <div style="font-size:0.85rem; color:#666; background:#f9f9f9; padding:8px; border-radius:5px;">${ev.rem}</div>
-                                ${ev.map && ev.map !== '123' ? `<a href="${ev.map}" target="_blank" class="nav-btn">📍 导航</a>` : ''}
+                                ${ev.rem ? `<div style="font-size:0.85rem; color:#666; background:#f9f9f9; padding:8px; border-radius:5px;">${ev.rem}</div>` : ''}
+                                ${ev.map ? `<a href="${ev.map}" target="_blank" class="nav-btn">📍 导航</a>` : ''}
                             </div>
                         `).join('');
+
                         container.innerHTML += `
                             <div class="card">
-                                <div class="card-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-                                    <div class="header-left"><div style="font-size:1.2rem; font-weight:900;">${d.num}</div><div style="font-size:0.7rem;">${d.date}</div></div>
+                                <div class="card-header" onclick="let s = this.nextElementSibling.style; s.display = s.display === 'block' ? 'none' : 'block'">
+                                    <div class="header-left"><div style="font-size:1.1rem; font-weight:900;">${d.num}</div><div style="font-size:0.7rem;">${d.date}</div></div>
                                     <div class="header-right"><div style="font-weight:700;">${d.loc}</div><i class="fas fa-chevron-down" style="color:#ddd;"></i></div>
                                 </div>
                                 <div style="display:none; padding:20px 0;">${evHtml}</div>
                             </div>`;
                     });
-                }
+                    log("行程加载成功");
+                },
+                error: function(err) { log("行程加载失败: " + err); }
             });
         }
 
@@ -147,18 +169,24 @@
             Papa.parse(urls.hotel, {
                 download: true,
                 header: true,
+                skipEmptyLines: true,
                 complete: function(results) {
                     const container = document.getElementById('hotel-container');
+                    container.innerHTML = "";
                     results.data.forEach(h => {
-                        if(!h['Hotel Name']) return;
+                        // 这里的 Key 必须与 Excel 第一行完全一致（注意空格）
+                        const name = h['Hotel Name'] || h['HotelName'];
+                        if(!name) return;
+
                         container.innerHTML += `
                             <div class="hotel-info">
-                                <div style="font-weight:800; font-size:1.1rem;">${h['Hotel Name']}</div>
+                                <div style="font-weight:800; font-size:1.1rem;">${name}</div>
                                 <div style="color:var(--primary-red); font-size:0.85rem; margin:5px 0;">📅 ${h['Date'] || ''}</div>
                                 <div style="font-size:0.9rem; color:#666;">${h['Address'] || ''}</div>
                                 ${h['Map Link'] ? `<a href="${h['Map Link']}" target="_blank" class="nav-btn" style="background:var(--primary-red); color:white; border:none;">📍 查看地图</a>` : ''}
                             </div>`;
                     });
+                    log("酒店加载成功");
                 }
             });
         }
@@ -168,10 +196,14 @@
                 download: true,
                 complete: function(results) {
                     const s = results.data;
-                    const home = s.find(r => r[0] && r[0].includes('Home Currency'))?.[1] || 'MYR';
-                    const foreign = s.find(r => r[0] && r[0].includes('Foreign Currency'))?.[1] || 'JPY';
-                    const rate = s.find(r => r[0] && r[0].includes('Foreign Currency'))?.[2] || 100;
-                    document.getElementById('exchange-rate').innerText = `当前参考汇率: ${rate} ${foreign} = 1 ${home}`;
+                    if(!s || s.length === 0) return;
+                    // 假设 Settings 表也是 Key-Value 格式
+                    const rateRow = s.find(r => r[0] && r[0].includes('Foreign Currency'));
+                    if (rateRow) {
+                        const foreign = rateRow[1] || 'JPY';
+                        const rate = rateRow[2] || 100;
+                        document.getElementById('exchange-rate').innerText = `当前参考汇率: ${rate} ${foreign} = 1 MYR`;
+                    }
                 }
             });
         }
