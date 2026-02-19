@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="Travel App">
     
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23C41E3A'/%3E%3Cpath d='M448 336v-40L288 192V79.2c0-17.7-14.8-31.2-32-31.2s-32 13.5-32 31.2V192L64 296v40l160-48v113.6l-48 31.8v33.6l80-25.6 80 25.6v-33.6l-48-31.8V288l160 48z' fill='%23FFF'/%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23C41E3A'/%3E%3Cpath d='M448 336v-40L288 192V79.2c0-17.7-14.8-31.2-32-31.2s-32 13.5-32 31.2V192L64 296v40l160-48v113.6l-48 31.8v33.6l80-25.6 80 25.6v-33.6l-48-31.8V288l160 48z' fill='%23FFF'/%3E%3C/svg%3E">
+    <link id="apple-icon" rel="apple-touch-icon" href="">
     <title>Travel App</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -194,6 +194,31 @@
     </nav>
 
     <script>
+        // === 新增：黑科技！在手机端瞬间画一个高清 PNG 图标，解决 iOS 拒绝 SVG 的 Bug ===
+        function generateMobileAppIcon() {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                
+                // 1. 画纯正红底 (苹果系统会自动给它切圆角，所以正方形最好)
+                ctx.fillStyle = '#C41E3A';
+                ctx.fillRect(0, 0, 512, 512);
+                
+                // 2. 画出跟电脑端一模一样的白色飞机
+                ctx.fillStyle = '#FFFFFF';
+                const planePath = new Path2D('M448 336v-40L288 192V79.2c0-17.7-14.8-31.2-32-31.2s-32 13.5-32 31.2V192L64 296v40l160-48v113.6l-48 31.8v33.6l80-25.6 80 25.6v-33.6l-48-31.8V288l160 48z');
+                ctx.fill(planePath);
+                
+                // 3. 把画好的图转换成 PNG，塞进手机识别的标签里
+                document.getElementById('apple-icon').href = canvas.toDataURL('image/png');
+            } catch (e) {
+                console.log("Icon generation skipped.");
+            }
+        }
+        // =========================================================================
+
         const urls = {
             itinerary: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=676918941&single=true&output=csv',
             hotel: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpYPQwHzRDxweD0gs48yJH7lBy2sdN9m9oZnSQPa55Rjhnr2uTdU3V_UGHjVMRxxoYSzoEepZWAS2E/pub?gid=237062416&single=true&output=csv',
@@ -205,6 +230,7 @@
         let expenses = JSON.parse(localStorage.getItem('my_trip_expenses')) || [];
 
         window.onload = function() {
+            generateMobileAppIcon(); // 进网页瞬间先画手机图标
             loadSettings();
             loadItinerary();
             loadHotels();
