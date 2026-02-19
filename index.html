@@ -11,8 +11,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Travel App">
     
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/223/223468.png?v=2">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/223/223468.png?v=2">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23C41E3A'/%3E%3Cpath d='M448 336v-40L288 192V79.2c0-17.7-14.8-31.2-32-31.2s-32 13.5-32 31.2V192L64 296v40l160-48v113.6l-48 31.8v33.6l80-25.6 80 25.6v-33.6l-48-31.8V288l160 48z' fill='%23FFF'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23C41E3A'/%3E%3Cpath d='M448 336v-40L288 192V79.2c0-17.7-14.8-31.2-32-31.2s-32 13.5-32 31.2V192L64 296v40l160-48v113.6l-48 31.8v33.6l80-25.6 80 25.6v-33.6l-48-31.8V288l160 48z' fill='%23FFF'/%3E%3C/svg%3E">
     <title>Travel App</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -218,6 +218,7 @@
             el.classList.add('active');
         }
 
+        // === 1. 行程逻辑 ===
         function loadItinerary() {
             Papa.parse(urls.itinerary, { download: true, complete: res => {
                 const data = res.data;
@@ -256,6 +257,7 @@
             }});
         }
 
+        // === 2. 酒店逻辑 ===
         function loadHotels() {
             Papa.parse(urls.hotel, { download: true, complete: res => {
                 const cont = document.getElementById('hotel-container');
@@ -284,6 +286,7 @@
             alert("✅ 地址已复制");
         }
 
+        // === 3. 记账逻辑 + 复制功能 ===
         function loadSettings() {
             Papa.parse(urls.settings, { download: true, complete: res => {
                 const s = res.data;
